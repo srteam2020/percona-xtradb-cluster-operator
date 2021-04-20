@@ -258,7 +258,76 @@ func (c *HAProxy) LogCollectorContainer(spec *api.LogCollectorSpec, logPsecrets 
 }
 
 func (c *HAProxy) PMMContainer(spec *api.PMMSpec, secrets string, cr *api.PerconaXtraDBCluster) (*corev1.Container, error) {
-	return nil, nil
+	ct := app.PMMClient(spec, secrets, cr.CompareVersionWith("1.2.0") >= 0, cr.CompareVersionWith("1.7.0") >= 0)
+
+	pmmEnvs := []corev1.EnvVar{
+		{
+			Name:  "DB_TYPE",
+			Value: "haproxy",
+		},
+		{
+			Name:  "MONITOR_USER",
+			Value: "monitor",
+		},
+		{
+			Name: "MONITOR_PASSWORD",
+			ValueFrom: &corev1.EnvVarSource{
+				SecretKeyRef: app.SecretKeySelector(secrets, "monitor"),
+			},
+		},
+	}
+
+	dbEnvs := []corev1.EnvVar{
+		{
+			Name:  "DB_USER",
+			Value: "monitor",
+		},
+		{
+			Name: "DB_PASSWORD",
+			ValueFrom: &corev1.EnvVarSource{
+				SecretKeyRef: app.SecretKeySelector(secrets, "monitor"),
+			},
+		},
+		{
+			Name:  "DB_CLUSTER",
+			Value: app.Name,
+		},
+		{
+			Name:  "DB_HOST",
+			Value: "localhost",
+		},
+		{
+			Name:  "DB_PORT",
+			Value: "3306",
+		},
+	}
+
+	ct.Env = append(ct.Env, pmmEnvs...)
+	ct.Env = append(ct.Env, dbEnvs...)
+	res, err := app.CreateResources(spec.Resources)
+	if err != nil {
+		return nil, fmt.Errorf("create resources error: %v", err)
+	}
+	ct.Resources = res
+
+	if cr.CompareVersionWith("1.7.0") >= 0 {
+		clusterPmmEnvs := []corev1.EnvVar{
+			{
+				Name:  "CLUSTER_NAME",
+				Value: cr.Name,
+			},
+			{
+				Name:  "PMM_ADMIN_CUSTOM_PARAMS",
+				Value: "--listen-port=8404",
+			},
+		}
+		ct.Env = append(ct.Env, clusterPmmEnvs...)
+
+		pmmAgentScriptEnv := app.PMMAgentScript("haproxy")
+		ct.Env = append(ct.Env, pmmAgentScriptEnv...)
+	}
+
+	return &ct, nil
 }
 
 func (c *HAProxy) Volumes(podSpec *api.PodSpec, cr *api.PerconaXtraDBCluster) (*api.Volume, error) {
