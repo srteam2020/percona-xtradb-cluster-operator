@@ -90,7 +90,7 @@ func pmmAgentEnvs(pmmServerHost, pmmServerUser, secrets string) []corev1.EnvVar 
 			},
 		},
 		{
-			Name: "POD_NAMESPACE",
+			Name: "POD_NAMESPASE",
 			ValueFrom: &corev1.EnvVarSource{
 				FieldRef: &corev1.ObjectFieldSelector{
 					FieldPath: "metadata.namespace",
@@ -137,7 +137,7 @@ func pmmAgentEnvs(pmmServerHost, pmmServerUser, secrets string) []corev1.EnvVar 
 		},
 		{
 			Name:  "PMM_AGENT_SETUP_NODE_NAME",
-			Value: "$(POD_NAMESPACE)-$(POD_NAME)",
+			Value: "$(POD_NAMESPASE)-$(POD_NAME)",
 		},
 		{
 			Name:  "PMM_AGENT_SETUP_METRICS_MODE",
