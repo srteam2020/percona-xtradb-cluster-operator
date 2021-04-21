@@ -279,9 +279,6 @@ func (c *HAProxy) PMMContainer(spec *api.PMMSpec, secrets string, cr *api.Percon
 				SecretKeyRef: app.SecretKeySelector(secrets, "monitor"),
 			},
 		},
-	}
-
-	dbEnvs := []corev1.EnvVar{
 		{
 			Name:  "DB_USER",
 			Value: "monitor",
@@ -304,17 +301,6 @@ func (c *HAProxy) PMMContainer(spec *api.PMMSpec, secrets string, cr *api.Percon
 			Name:  "DB_PORT",
 			Value: "3306",
 		},
-	}
-
-	ct.Env = append(ct.Env, pmmEnvs...)
-	ct.Env = append(ct.Env, dbEnvs...)
-	res, err := app.CreateResources(spec.Resources)
-	if err != nil {
-		return nil, fmt.Errorf("create resources error: %v", err)
-	}
-	ct.Resources = res
-
-	clusterPmmEnvs := []corev1.EnvVar{
 		{
 			Name:  "CLUSTER_NAME",
 			Value: cr.Name,
@@ -324,10 +310,16 @@ func (c *HAProxy) PMMContainer(spec *api.PMMSpec, secrets string, cr *api.Percon
 			Value: "--listen-port=8404",
 		},
 	}
-	ct.Env = append(ct.Env, clusterPmmEnvs...)
+	ct.Env = append(ct.Env, pmmEnvs...)
 
 	pmmAgentScriptEnv := app.PMMAgentScript("haproxy")
 	ct.Env = append(ct.Env, pmmAgentScriptEnv...)
+
+	res, err := app.CreateResources(spec.Resources)
+	if err != nil {
+		return nil, fmt.Errorf("create resources error: %v", err)
+	}
+	ct.Resources = res
 
 	return &ct, nil
 }
