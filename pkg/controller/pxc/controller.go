@@ -957,10 +957,11 @@ func (r *ReconcilePerconaXtraDBCluster) deleteStatefulSetPods(namespace string, 
 }
 
 func (r *ReconcilePerconaXtraDBCluster) deleteStatefulSet(cr *api.PerconaXtraDBCluster, sfs api.StatefulApp, deletePVC bool) error {
+	sfsWithOwner := appsv1.StatefulSet{}
 	err := r.client.Get(context.TODO(), types.NamespacedName{
 		Name:      sfs.StatefulSet().Name,
 		Namespace: cr.Namespace,
-	}, &appsv1.StatefulSet{})
+	}, &sfsWithOwner)
 	if err != nil && !k8serrors.IsNotFound(err) {
 		return errors.Wrapf(err, "get statefulset: %s", sfs.StatefulSet().Name)
 	}
@@ -969,8 +970,7 @@ func (r *ReconcilePerconaXtraDBCluster) deleteStatefulSet(cr *api.PerconaXtraDBC
 		return nil
 	}
 
-
-	if !metav1.IsControlledBy(sfs.StatefulSet(), cr){
+	if !metav1.IsControlledBy(&sfsWithOwner, cr){
 		return nil
 	}
 
