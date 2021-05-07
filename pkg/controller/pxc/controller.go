@@ -246,10 +246,10 @@ func (r *ReconcilePerconaXtraDBCluster) Reconcile(request reconcile.Request) (re
 				sfs = statefulset.NewProxy(o)
 				// deletePVC is always true on this stage
 				// because we never reach this point without finalizers
-				err = r.deleteStatefulSet(o.Namespace, sfs, true)
+				err = r.deleteStatefulSet(o, sfs, true)
 			case "delete-pxc-pvc":
 				sfs = statefulset.NewNode(o)
-				err = r.deleteStatefulSet(o.Namespace, sfs, true)
+				err = r.deleteStatefulSet(o, sfs, true)
 			// nil error gonna be returned only when there is no more pods to delete (only 0 left)
 			// until than finalizer won't be deleted
 			case "delete-pxc-pods-in-order":
@@ -426,7 +426,7 @@ func (r *ReconcilePerconaXtraDBCluster) Reconcile(request reconcile.Request) (re
 			return reconcile.Result{}, errors.Wrap(err, "failed to create or update haproxy replicas")
 		}
 	} else {
-		err = r.deleteStatefulSet(o.Namespace, statefulset.NewHAProxy(o), false)
+		err = r.deleteStatefulSet(o, statefulset.NewHAProxy(o), false)
 		if err != nil {
 			return reconcile.Result{}, errors.Wrap(err, "delete HAProxy stateful set")
 		}
@@ -503,7 +503,7 @@ func (r *ReconcilePerconaXtraDBCluster) Reconcile(request reconcile.Request) (re
 			}
 		}
 
-		err = r.deleteStatefulSet(o.Namespace, proxysqlSet, deletePVC)
+		err = r.deleteStatefulSet(o, proxysqlSet, deletePVC)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
@@ -956,10 +956,10 @@ func (r *ReconcilePerconaXtraDBCluster) deleteStatefulSetPods(namespace string, 
 	return errors.New("waiting for pods to be deleted")
 }
 
-func (r *ReconcilePerconaXtraDBCluster) deleteStatefulSet(namespace string, sfs api.StatefulApp, deletePVC bool) error {
+func (r *ReconcilePerconaXtraDBCluster) deleteStatefulSet(cr *api.PerconaXtraDBCluster, sfs api.StatefulApp, deletePVC bool) error {
 	err := r.client.Get(context.TODO(), types.NamespacedName{
 		Name:      sfs.StatefulSet().Name,
-		Namespace: namespace,
+		Namespace: cr.Namespace,
 	}, &appsv1.StatefulSet{})
 	if err != nil && !k8serrors.IsNotFound(err) {
 		return errors.Wrapf(err, "get statefulset: %s", sfs.StatefulSet().Name)
@@ -969,12 +969,17 @@ func (r *ReconcilePerconaXtraDBCluster) deleteStatefulSet(namespace string, sfs 
 		return nil
 	}
 
+
+	if !metav1.IsControlledBy(sfs.StatefulSet(), cr){
+		return nil
+	}
+
 	err = r.client.Delete(context.TODO(), sfs.StatefulSet())
 	if err != nil && !k8serrors.IsNotFound(err) {
 		return errors.Wrapf(err, "delete statefulset: %s", sfs.StatefulSet().Name)
 	}
 	if deletePVC {
-		err = r.deletePVC(namespace, sfs.Labels())
+		err = r.deletePVC(cr.Namespace, sfs.Labels())
 		if err != nil {
 			return errors.Wrapf(err, "delete pvc: %s", sfs.StatefulSet().Name)
 		}
