@@ -5,6 +5,7 @@ import (
 	"crypto/md5"
 	"fmt"
 	"reflect"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -968,6 +969,22 @@ func (r *ReconcilePerconaXtraDBCluster) deleteStatefulSetPods(namespace string, 
 	return errors.New("waiting for pods to be deleted")
 }
 
+func xtraDBClusterFresherThanSfs(cr *api.PerconaXtraDBCluster, sfs appsv1.StatefulSet) bool {
+	labeledRV, ok := sfs.Labels["owner-rv"]
+	if !ok {
+		return true
+	}
+	largerRV, err := strconv.Atoi(cr.ResourceVersion)
+	if err != nil {
+		return true
+	}
+	smallerRV, err := strconv.Atoi(labeledRV)
+	if err != nil {
+		return true
+	}
+	return largerRV >= smallerRV
+}
+
 func (r *ReconcilePerconaXtraDBCluster) deleteStatefulSet(namespace string, sfs api.StatefulApp, deletePVC bool) error {
 	err := r.client.Get(context.TODO(), types.NamespacedName{
 		Name:      sfs.StatefulSet().Name,
@@ -978,6 +995,11 @@ func (r *ReconcilePerconaXtraDBCluster) deleteStatefulSet(namespace string, sfs 
 	}
 
 	if k8serrors.IsNotFound(err) {
+		return nil
+	}
+
+	// Here we should check for the resource version
+	if !xtraDBClusterFresherThanSfs(cr, sfsWithOwner) {
 		return nil
 	}
 

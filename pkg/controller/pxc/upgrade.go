@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/percona/percona-xtradb-cluster-operator/pkg/pxc/app"
+	"github.com/prometheus/common/log"
 
 	"github.com/pkg/errors"
 
@@ -169,6 +170,7 @@ func (r *ReconcilePerconaXtraDBCluster) updatePod(sfs api.StatefulApp, podSpec *
 		currentSet.Spec.Template.Spec.Volumes = sfsVolume.Volumes
 	}
 
+	currentSet.Labels["owner-rv"] = cr.ResourceVersion
 	err = r.client.Update(context.TODO(), currentSet)
 	if err != nil {
 		return fmt.Errorf("update error: %v", err)
