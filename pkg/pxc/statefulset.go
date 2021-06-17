@@ -105,8 +105,6 @@ func StatefulSet(sfs api.StatefulApp, podSpec *api.PodSpec, cr *api.PerconaXtraD
 		}
 	}
 
-	customLabels["owner-rv"] = cr.ResourceVersion
-
 	obj := sfs.StatefulSet()
 	obj.Spec = appsv1.StatefulSetSpec{
 		Replicas: &podSpec.Size,
@@ -123,6 +121,8 @@ func StatefulSet(sfs api.StatefulApp, podSpec *api.PodSpec, cr *api.PerconaXtraD
 		},
 		UpdateStrategy: sfs.UpdateStrategy(cr),
 	}
+
+	obj.Labels["owner-rv"] = cr.ResourceVersion
 
 	if sfsVolume != nil && sfsVolume.PVCs != nil {
 		obj.Spec.VolumeClaimTemplates = sfsVolume.PVCs
