@@ -6,7 +6,7 @@ env:
   IMAGE_NAMESPACE: ghcr.io/sieve-project/action
 
 jobs:
-  casskop-operator:
+  e2e-test:
     runs-on: ubuntu-latest
     env:
       GOPATH: /home/runner/go
