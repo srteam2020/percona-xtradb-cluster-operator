@@ -48,7 +48,8 @@ jobs:
       - name: E2E Test
         run: |
           env
-          ./e2e-tests/one-pod/run
+          ./e2e-tests/init-deploy/run
+          ./e2e-tests/recreate/run
       - uses: actions/upload-artifact@v2
         with:
           name: log
