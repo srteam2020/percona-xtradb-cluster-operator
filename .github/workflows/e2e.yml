@@ -11,6 +11,7 @@ jobs:
     env:
       GOPATH: /home/runner/go
       KUBECONFIG: /home/runner/.kube/config
+      IMAGE: perconalab/percona-xtradb-cluster-operator:main
     steps:
       - uses: actions/checkout@v2
       - name: Setup Git
@@ -46,6 +47,7 @@ jobs:
           kind create cluster --config kind.yaml
       - name: E2E Test
         run: |
+          env
           ./e2e-tests/one-pod/run
       - uses: actions/upload-artifact@v2
         with:
