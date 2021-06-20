@@ -41,6 +41,9 @@ jobs:
         run: |
           go get sigs.k8s.io/kind
           kind
+      - name: Create Cluster
+        run: |
+          kind create cluster --config kind.yaml
       - name: E2E Test
         run: |
           ./e2e-tests/one-pod/run
